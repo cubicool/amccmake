@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+
+# amccmake: Automated Mulitple Compiler cmake
+# By: Jeremy Moles (cubicool@gmail.com)
+
+# This is the script I use to setup my development environment using CMake and
+# the 3 compilers I most often test with: GCC, Clang, and
+# unfortunately--because of the need to write software that works on
+# Windows--some setup for cross-compiling using the mingw64 suite in Linux.
+# You should find it useful in your own adventures with writing wholesome,
+# warning-free cross-platform code. :)
+
+CONF_FILE="amccmake.conf"
+ERROR_FILE="error.txt"
+
+# Dumps a basic ${CONF_FILE} file to stdout. This is then later redirected
+# to the actual file on disk.
+function DumpConfig() { cat <<'EOF'
+# The path to the CMakeLists.txt file. By default (if the variable is empty), it is the
+# same directory as this configuration file.
+CMAKELISTS_PATH=""
+
+# The path to the directory in which the various supported compiler and build combinations
+# are configured. By default, it inside a directory called "build", at the same level as
+# the CMakeLists.txt file specified by the previous variable. This variable should ALWAYS
+# be specified RELATIVE to the CMAKELISTS_PATH variable; i.e., DO NOT USE A FULL PATH
+# here.
+BUILD_PATH="build"
+
+# These variables are applied to every configuration of your project.
+CMAKE_VARS=(
+)
+
+# Options in this array (and the corresponding arrays that follow) are only
+# aplied to the configurations using the specific compiler they represent.
+gcc_CMAKE_VARS=(
+	-DCMAKE_C_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -ansi -pedantic -Winvalid-pch'"
+	-DCMAKE_CXX_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -Winvalid-pch -std=c++11'"
+)
+
+clang_CMAKE_VARS=(
+	-DCMAKE_C_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -ansi -pedantic -Wno-error=unused-command-line-argument -Winvalid-pch'"
+	-DCMAKE_CXX_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -std=c++11'"
+)
+
+mingw64_CMAKE_VARS=(
+)
+
+# Here you can override the actual cmake invocations that are called. By default,
+# they are: cmake, cmake, and mingw64-cmake, respectively. If you leave the variables
+# blank, the defaults will be used.
+gcc_CMAKE=""
+clang_CMAKE=""
+mingw64_CMAKE=""
+
+EOF
+}
+
+function Help() { cat <<EOF
+${0} <config | help | amc_dir...>
+
+OPTIONS
+	config: Creates a standard ${CONF_FILE} file in the local directory.
+	Generally the first step in using amccmake.
+
+	help: Print this help message.
+
+	amc_dir: The path to a directory containing an ${CONF_FILE} file.
+
+This script is used to generate multiple different directories for your
+CMake-based project, one for each compiler/build combination. Currently,
+six different directories are created, all inside a directory specified
+in the configuration file (BUILD_PATH).
+EOF
+}
+
+# If we pass "config" as the first argument, create a ${CONF_FILE} in the current directory
+# to be edited that controls how amccmake behaves.
+if [ "${1}" = "config" ]; then
+	DumpConfig > "${CONF_FILE}"
+
+	echo "${CONF_FILE} created; now edit as necessary."
+
+	exit
+
+# If we pass no arguments (or the argument "help"), call the Help() function.
+elif [ "${1}" = "help" -o -z "${1}" ]; then
+	Help
+
+	exit
+fi
+
+# 1. This script relies on being called with the path to a directory containing
+#    a ${CONF_FILE} file. The resultant build directories will be created relative
+#    to the directory containing the configuration file, unless a 2nd (optional)
+#    argument is passed defining the directory containing the root CMakeLists.txt.
+if [ ! -d "${1}" -o ! -r "${1}/${CONF_FILE}" ]; then
+	echo "Couldn't find configuration file '${1}/${CONF_FILE}'; exiting."
+
+	exit 1
+fi
+
+# 2. Source the variables configuration, which will be used in the local variables
+#    created within this script.
+source "${1}/${CONF_FILE}"
+
+if [ -z "${CMAKELISTS_PATH}" ]; then
+	CMAKELISTS_PATH="${1}"
+fi
+
+if [ ! -r "${CMAKELISTS_PATH}/CMakeLists.txt" ]; then
+	echo "Couldn't find CMakeLists at: ${CMAKELISTS_PATH}"
+
+	exit 2
+fi
+
+# 3. This script will used the paths specified in the configuration file to both
+#    find the toplevel CMakeLists.txt file and to determine where the build
+#    directories will be located. However, we get the absolute paths
+ABS_CMAKELISTS_PATH="$(readlink -f "${CMAKELISTS_PATH}")"
+ABS_BUILD_PATH="${ABS_CMAKELISTS_PATH}/${BUILD_PATH}"
+
+# 4. I personally DO NOT like to pollute my git repositories with a bunch of build
+#    directories and cmake files (and to those of you who DON'T mind, how do you manage
+#    it?), and I've gotten into the habit of creating a toplevel root build directory
+#    wherein many various other directories reside representing the compiler and build
+#    "type" (debug, release) of the project.
+mkdir -p "${ABS_BUILD_PATH}/"{gcc,clang,mingw64}-{release,debug}
+
+# 5. Here I define a few variables that a relevant to my local build. Additionally, you
+#    can use the more specific ${COMPILER}_CMAKE_VARS to add options only for that target.
+_CMAKE_VARS=(
+	${CMAKE_VARS[@]}
+)
+
+_gcc_CMAKE_VARS=(
+	-DCMAKE_CXX_COMPILER=c++
+	-DCMAKE_C_COMPILER=cc
+	${gcc_CMAKE_VARS[@]}
+)
+
+_clang_CMAKE_VARS=(
+	-DCMAKE_CXX_COMPILER=clang++
+	-DCMAKE_C_COMPILER=clang
+	${clang_CMAKE_VARS[@]}
+)
+
+# The compiler here will be controlled by the special cmake wrapper used by mingw64.
+_mingw64_CMAKE_VARS=(
+	${mingw64_CMAKE_VARS[@]}
+)
+
+# Define the actual cmake invocations for each platform.
+_gcc_CMAKE="${gcc_CMAKE:=cmake}"
+_clang_CMAKE="${clang_CMAKE:=cmake}"
+_mingw64_CMAKE="${mingw64_CMAKE:=mingw64-cmake}"
+
+# 6. Now we enumerate each of our directories and configure CMake within each.
+cd "${ABS_BUILD_PATH}"
+
+rm -f "${ERROR_FILE}"
+
+for D in *; do
+	# If we're not a directory, skip.
+	if [ ! -d "${D}" ]; then
+		continue
+	fi
+
+	# Get the left and right parts of the directory name, separated by a "-".
+	COMPILER="${D/-*}"
+	BUILD="${D#*-}"
+
+	# If we don't match our expected format, skip.
+	if [ "${COMPILER}-${BUILD}" != "${D}" ]; then
+		continue
+	fi
+
+	echo "Configuring cmake for ${COMPILER} ($BUILD)"
+
+	# Execute the actual cmake command in a subshell, so that we can capture all the output
+	# AND not have to worry about changing back to this directory.
+	(
+		CMD="$(eval echo \${_${COMPILER}_CMAKE}) ${ABS_CMAKELISTS_PATH} ${CMAKE_VARS[@]} -DCMAKE_BUILD_TYPE=${BUILD} $(eval echo "\${_${COMPILER}_CMAKE_VARS[@]}")"
+
+		echo "================================================================================"
+		echo "${COMPILER}-${BUILD} >> command was:"
+		echo "${CMD}"
+		echo "================================================================================"
+
+		cd "${D}"
+
+		eval "${CMD}"
+	) &>> "${ERROR_FILE}"
+done
+
+echo "Error log at: $(pwd)/${ERROR_FILE}"
+

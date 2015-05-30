@@ -1,0 +1,6 @@
+PROJECT(foobar)
+
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+ADD_EXECUTABLE(foobar foobar.cpp)
+
