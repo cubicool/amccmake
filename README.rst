@@ -1,10 +1,11 @@
 OVERVIEW
 ========
 
-This is the script I use to setup my development environment using CMake and the 3
-compilers I most often test with: GCC, Clang, and unfortunately--because of the need to
-write software that works on Windows--some setup for cross-compiling using the mingw64
-suite in Linux. You should find it useful in your own adventures with writing wholesome,
+This is the Bash script I use to setup my development environment on Linux
+using CMake and the 3 compilers I most often test with: GCC, Clang, and
+unfortunately--because of the need to write software that works on
+Windows--support for cross-compiling using the mingw64 suite. You
+should find it useful in your own adventures while writing wholesome,
 warning-free cross-platform code. :)
 
 USAGE
@@ -34,5 +35,5 @@ REQUIREMENTS
 
 Any psuedo-recent version of CMake will probably be okay. You will also need to install
 gcc and g++, clang and clang++, and the mingw64-g++ packages on whatever distro you
-develop on (on Fedora, this package is simply called mingw64-gcc, etc.)
+develop on (in Fedora, this package is simply called mingw64-gcc, etc.)
 
