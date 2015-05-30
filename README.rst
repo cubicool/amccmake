@@ -30,6 +30,20 @@ Options
     six different directories are created, all inside a directory specified
     in the configuration file (BUILD_PATH).
 
+Example
+-------
+
+An example might look like::
+
+  # amccmake config
+  # vim amccmake.conf
+  # ...edit...
+  # amccmake .
+  # cd build
+  # less -S error.txt
+  # cd gcc-debug
+  # make
+
 REQUIREMENTS
 ============
 
