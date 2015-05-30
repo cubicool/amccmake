@@ -22,10 +22,17 @@ Options
   help
     Print this help message.
 
-  acm_dir
+  amc_dir
     The path to a directory containing an amccmake.conf file.
     This script will generate multiple unique directories for your
     CMake-based project, one for each compiler/build combination. Currently,
     six different directories are created, all inside a directory specified
     in the configuration file (BUILD_PATH).
+
+REQUIREMENTS
+============
+
+Any psuedo-recent version of CMake will probably be okay. You will also need to install
+gcc and g++, clang and clang++, and the mingw64-g++ packages on whatever distro you
+develop on (on Fedora, this package is simply called mingw64-gcc, etc.)
 
