@@ -32,8 +32,8 @@ gcc_CMAKE_VARS=(
 )
 
 clang_CMAKE_VARS=(
-	-DCMAKE_C_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -ansi -pedantic -Wno-error=unused-command-line-argument -Winvalid-pch'"
-	-DCMAKE_CXX_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -std=c++11'"
+	-DCMAKE_C_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -ansi -pedantic -Wno-error=unused-command-line-argument -Winvalid-pch -Qunused-arguments'"
+	-DCMAKE_CXX_FLAGS_INIT="'-W -Wall -Wno-unused-parameter -Werror -Wno-error=unused-command-line-argument -Winvalid-pch -Qunused-arguments -std=c++11'"
 )
 
 mingw64_CMAKE_VARS=(
@@ -83,11 +83,11 @@ elif [ "${1}" = "help" -o -z "${1}" ]; then
 	exit
 fi
 
-# 1. This script relies on being called with the path to a directory containing
-#    a ${CONF_FILE} file. The resultant build directories will be created according
-#    to the relative value indicated in your config file.
-if [ ! -d "${1}" -o ! -r "${1}/${CONF_FILE}" ]; then
-	echo "Couldn't find configuration file '${1}/${CONF_FILE}'; exiting."
+# 1. This script relies on being called with the path to a configuration file.
+#    The resultant build directories will be created according to the relative
+#    values indicated in your config file.
+if [ ! -r "${1}" ]; then
+	echo "Couldn't find configuration file '${1}'; exiting."
 
 	exit 1
 fi
@@ -95,11 +95,14 @@ fi
 # 2. Source the variables configuration, which will be used by the local variables
 #    created within this script, whose names are identical (but prefixed with an
 #    underscore inside this script).
-source "${1}/${CONF_FILE}"
+source "${1}"
 
 if [ -z "${CMAKELISTS_PATH}" ]; then
-	CMAKELISTS_PATH="${1}"
+	CMAKELISTS_PATH="."
 fi
+
+ABS_CONF_FILE_PATH="$(dirname "$(readlink -f "${1}")")"
+CMAKELISTS_PATH="${ABS_CONF_FILE_PATH}/${CMAKELISTS_PATH}"
 
 if [ ! -r "${CMAKELISTS_PATH}/CMakeLists.txt" ]; then
 	echo "Couldn't find CMakeLists at: ${CMAKELISTS_PATH}"
