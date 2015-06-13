@@ -51,3 +51,10 @@ Any psuedo-recent version of CMake will probably be okay. You will also need to 
 gcc and g++, clang and clang++, and the mingw64-g++ packages on whatever distro you
 develop on (in Fedora, this package is simply called mingw64-gcc, etc.)
 
+TODO/BUGS
+=========
+
+- There is an issue (that I have trouble reproducing consistently) whereby the compiler will
+  get set to something totally wonky; it tends to happen, I think, after running amccmake
+  twice, where the first attempt failed and the second does not.
+
