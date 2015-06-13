@@ -54,9 +54,11 @@ gcc_CMAKE=""
 clang_CMAKE=""
 mingw_CMAKE=""
 
-# Called immedately before the corresponding *_CMAKE command is evaluated, allowing the user to automate any
-# steps necessary before cmake is fired off. This function is executed inside the generated build directory,
-# so directories can be referenced relatively.
+# Called immedately before the corresponding *_CMAKE command is evaluated, allowing the user to
+# automate any steps necessary before cmake is fired off. This function is executed inside the
+# generated build directory, so directories can be referenced relatively.  You will need to look at
+# the source of amccmake (for now) to see what variables are available to you. NOTE: The output of
+# this function (and PostConfigure) is sent to the error log file.
 function PreConfigure() {
 	return 0
 }
@@ -230,6 +232,10 @@ cd "${ABS_BUILD_PATH}"
 # Always use a clean error file; be sure and save them somewhere if you don't
 # want them overridden!
 rm -f "${ERROR_FILE}"
+
+# TODO: Consider implementing global PreConfigure()/PostConfigure() functions
+# that are called before CMake is called for each compiler configuration. This
+# would let us setup git submodules, etc.
 
 for D in *; do
 	# If we're not a directory, skip.
